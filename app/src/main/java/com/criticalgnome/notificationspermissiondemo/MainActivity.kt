@@ -1,5 +1,6 @@
 package com.criticalgnome.notificationspermissiondemo
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -15,13 +16,16 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
 
-    private val notificationManager =
+    private val notificationManager by lazy {
         getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+//        val b1 = shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)
 
         createChannel(CHANNEL_1_ID, CHANNEL_1_NAME, CHANNEL_1_DESCRIPTION)
         createChannel(CHANNEL_2_ID, CHANNEL_2_NAME, CHANNEL_2_DESCRIPTION)
@@ -62,15 +66,18 @@ class MainActivity : AppCompatActivity() {
         message: String,
         priority: Int = NotificationCompat.PRIORITY_DEFAULT
     ) = with(NotificationManagerCompat.from(this)) {
-        notify(
-            notificationId,
-            NotificationCompat.Builder(this@sendNotification, channelId)
-                .setSmallIcon(iconId)
-                .setContentTitle(title)
-                .setContentText(message)
-                .setPriority(priority)
-                .build()
-        )
+        if (areNotificationsEnabled()) {
+            notify(
+                notificationId,
+                NotificationCompat.Builder(this@sendNotification, channelId)
+                    .setSmallIcon(iconId)
+                    .setContentTitle(title)
+                    .setContentText(message)
+                    .setPriority(priority)
+                    .build())
+        } else {
+//            requestPermissions(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 
     companion object {
