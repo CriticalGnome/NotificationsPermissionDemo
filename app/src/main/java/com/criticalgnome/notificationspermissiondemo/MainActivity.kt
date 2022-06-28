@@ -33,13 +33,18 @@ class MainActivity : AppCompatActivity() {
     ) { isGranted: Boolean ->
         if (isGranted) {
             // Permission is granted. Continue the action or workflow.
-            // TODO send notification
+            Snackbar
+                .make(binding.root, "Notification allowed", Snackbar.LENGTH_SHORT)
+                .show()
         } else {
             // Explain to the user that the feature is unavailable because the
             // features requires a permission that the user has denied. At the
             // same time, respect the user's decision. Don't link to system
             // settings in an effort to convince the user to change their
             // decision.
+            Snackbar
+                .make(binding.root, "Notification blocked", Snackbar.LENGTH_SHORT)
+                .show()
         }
     }
 
@@ -48,31 +53,7 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        when {
-            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED -> {
-                Log.e("NPD", "onCreate: PERMISSION GRANTED")
-                // TODO send notification
-            }
-            shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) -> {
-                Snackbar.make(
-                    binding.root,
-                    "Notification blocked",
-                    Snackbar.LENGTH_LONG
-                ).setAction("Settings") {
-                    // Responds to click on the action
-                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    val uri: Uri = Uri.fromParts("package", packageName, null)
-                    intent.data = uri
-                    startActivity(intent)
-                }.show()
-            }
-            else -> {
-                // The registered ActivityResultCallback gets the result of this request
-                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
-        }
-
+        requestNotificationPermission()
         createChannel(CHANNEL_1_ID, CHANNEL_1_NAME, CHANNEL_1_DESCRIPTION)
         createChannel(CHANNEL_2_ID, CHANNEL_2_NAME, CHANNEL_2_DESCRIPTION)
 
@@ -92,16 +73,49 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+
+        when {
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED -> {
+                Log.d("NotificationsPermissionDemo", "Notifications allowed")
+            }
+            shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) -> {
+                Log.d("NotificationsPermissionDemo", "Notifications blocked")
+                Snackbar.make(
+                    binding.root,
+                    "Notification blocked",
+                    Snackbar.LENGTH_INDEFINITE
+                ).setAction("Settings") {
+                    // Responds to click on the action
+                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    val uri: Uri = Uri.fromParts("package", packageName, null)
+                    intent.data = uri
+                    startActivity(intent)
+                }.show()
+            }
+            else -> {
+                // The registered ActivityResultCallback gets the result of this request
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
     private fun createChannel(
         id: String,
         name: String,
         description: String,
         importance: Int = NotificationManager.IMPORTANCE_DEFAULT
     ) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            notificationManager.createNotificationChannel(
-                NotificationChannel(id, name, importance).apply { this.description = description })
-        }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+
+        notificationManager.createNotificationChannel(
+            NotificationChannel(id, name, importance).apply { this.description = description }
+        )
     }
 
     private fun Context.sendNotification(
